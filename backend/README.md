@@ -1,7 +1,124 @@
-grpcurl -plaintext -d '{}' localhost:50051 user.UserService/ListUsers
+# Project Setup and Deployment Guide
 
+## Install Prerequisites
+
+### Install Protocol Buffers Compiler (`protoc`)
+
+1. **macOS**: Use Homebrew to install `protoc`.
+
+    ```sh
+    brew install protobuf
+    ```
+
+2. **Ubuntu/Debian**: Install using `apt-get`.
+
+    ```sh
+    sudo apt-get update
+    sudo apt-get install -y protobuf-compiler
+    ```
+
+3. **Windows**: Download the latest release from the [Protobuf releases page](https://github.com/protocolbuffers/protobuf/releases) and add it to your system PATH.
+
+### Install Go Protobuf Plugins
+
+1. Install the Go Protobuf plugin:
+
+    ```sh
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+    ```
+
+2. Install the Go gRPC plugin:
+
+    ```sh
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+    ```
+
+    Ensure the Go binaries are in the PATH. For example, add the following to the `.bashrc` or `.zshrc`:
+
+    ```sh
+    export PATH="$PATH:$(go env GOPATH)/bin"
+    ```
+
+## Generate Protobuf Code
+
+Run the following commands to generate Go code from the Protobuf definitions:
+
+```sh
 protoc --go_out=services/user-service/api/gen --go-grpc_out=services/user-service/api/gen proto/user.proto
-
 protoc --go_out=services/course-service/api/gen --go-grpc_out=services/course-service/api/gen proto/course.proto
+```
 
-docker build -t amrimuf/course-service:latest .     
+## Build Docker Images
+
+Build the Docker image for the services:
+
+```sh
+docker build -t amrimuf/<service-name>:latest .
+```
+
+## Create Docker Registry Secret
+
+Create a Kubernetes secret for accessing the Docker registry:
+
+```sh
+kubectl create secret docker-registry my-registry-secret \
+  --docker-server=<the_REGISTRY_SERVER> \
+  --docker-username=<the_USERNAME> \
+  --docker-password=<the_PASSWORD> \
+  --docker-email=<the_EMAIL>
+```
+
+## Apply Kubernetes Manifests
+
+Deploy the services and deployments to Kubernetes:
+
+```sh
+kubectl apply -f deploy/k8s/base/deployments/
+kubectl apply -f deploy/k8s/base/services/
+```
+
+## Verify Deployment
+
+Check the status of the Pods, Deployments, Services, and Endpoints:
+
+```sh
+kubectl get pods
+kubectl get deployments
+kubectl get services
+kubectl get endpoints
+```
+
+## Troubleshooting
+
+To view logs and get details for a specific Pod:
+
+```sh
+kubectl logs <pod-name> --previous
+kubectl describe pod <pod-name>
+```
+
+## Cleanup
+
+Remove all deployments, services, and pods:
+
+```sh
+kubectl delete deployments --all
+kubectl delete services --all
+kubectl delete pods --all
+```
+
+Alternatively, delete all resources in the base directory:
+
+```sh
+kubectl delete -f deploy/k8s/base/
+```
+
+Remove all resources in the namespace:
+
+```sh
+kubectl delete all --all
+```
+
+---
+
+Replace `<the_REGISTRY_SERVER>`, `<the_USERNAME>`, `<the_PASSWORD>`, and `<the_EMAIL>` with the actual Docker registry credentials.

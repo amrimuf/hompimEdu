@@ -16,7 +16,7 @@ import (
 func callUserService() {
     maxRetries := 5
     for i := 0; i < maxRetries; i++ {
-        conn, err := grpc.Dial("user-service:50051", grpc.WithInsecure())
+        conn, err := grpc.NewClient("user-service:50051", grpc.WithInsecure())
         if err != nil {
             log.Printf("Failed to connect: %v. Retrying in 5 seconds...", err)
             time.Sleep(5 * time.Second)
