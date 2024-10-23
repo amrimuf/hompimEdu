@@ -17,5 +17,6 @@ spec:
                   image: amrimuf/user-service:latest
                   ports:
                       - containerPort: 50051
+                      - containerPort: 8080 
             imagePullSecrets:
                 - name: my-registry-secret

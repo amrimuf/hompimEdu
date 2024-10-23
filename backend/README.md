@@ -88,6 +88,26 @@ kubectl get services
 kubectl get endpoints
 ```
 
+## Port Forward to Access HTTP Service
+
+If your service exposes an HTTP endpoint on port `8080`, you can access it using `kubectl port-forward`. This maps the service port in the Kubernetes cluster to your local machine.
+
+1. Forward the HTTP port (e.g., `8080`):
+
+    ```sh
+    kubectl port-forward svc/user-service 8080:8080
+    ```
+
+    This command forwards the port `8080` from the `user-service` in the Kubernetes cluster to your local machine on the same port.
+
+2. Verify the service is accessible by sending a request using `curl`:
+
+    ```sh
+    curl http://localhost:8080/users
+    ```
+
+    If everything is working, you should see a response with the list of users from the service.
+
 ## Troubleshooting
 
 To view logs and get details for a specific Pod:
