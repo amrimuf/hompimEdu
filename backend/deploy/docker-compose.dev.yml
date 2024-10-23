@@ -2,14 +2,17 @@ version: "3.8"
 
 services:
     user-service:
-        image: amrimuf/user-service:latest
+        build: 
+            context: ../services/user-service
         ports:
             - "50051:50051"
+            - "8080:8080"
         networks:
             - myapp-network
 
     course-service:
-        image: amrimuf/course-service:latest
+        build: 
+            context: ../services/course-service
         ports:
             - "50052:50052"
         networks:

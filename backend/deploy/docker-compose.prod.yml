@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+    user-service:
+        image: amrimuf/user-service:latest
+        ports:
+            - "50051:50051"
+            - "8080:8080"
+        networks:
+            - myapp-network
+
+    course-service:
+        image: amrimuf/course-service:latest
+        ports:
+            - "50052:50052"
+        networks:
+            - myapp-network
+
+networks:
+    myapp-network:
+        driver: bridge

@@ -1,50 +1,24 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net"
-	"time"
 
 	"github.com/amrimuf/hompimEdu/services/course-service/api/gen/coursepb"
-	pb "github.com/amrimuf/hompimEdu/services/course-service/api/gen/userpb"
 	"github.com/amrimuf/hompimEdu/services/course-service/internal/service"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-func callUserService() {
-    maxRetries := 5
-    for i := 0; i < maxRetries; i++ {
-        conn, err := grpc.NewClient("user-service:50051", grpc.WithInsecure())
-        if err != nil {
-            log.Printf("Failed to connect: %v. Retrying in 5 seconds...", err)
-            time.Sleep(5 * time.Second)
-            continue
-        }
-        defer conn.Close()
-
-        client := pb.NewUserServiceClient(conn)
-
-        // Call ListUsers method
-        resp, err := client.ListUsers(context.Background(), &emptypb.Empty{})
-        if err != nil {
-            log.Printf("Could not list users: %v. Retrying in 5 seconds...", err)
-            time.Sleep(5 * time.Second)
-            continue
-        }
-
-        for _, user := range resp.Users {
-            log.Printf("User: %s, Name: %s", user.Id, user.Name)
-        }
-        return
-    }
-    log.Fatalf("Failed to connect to user-service after %d attempts", maxRetries)
-}
 
 
 func main() {
-    callUserService()
+    // Initialize user service client
+    userServiceClient, err := service.NewUserServiceClient("user-service:50051")
+    if err != nil {
+        log.Fatalf("Failed to connect to user service: %v", err)
+    }
+
+    // Call ListUsers
+    userServiceClient.CallListUsers()
 
     lis, err := net.Listen("tcp", ":50052")
     if err != nil {

@@ -55,8 +55,15 @@ Build the Docker image for the services:
 ```sh
 docker build -t amrimuf/<service-name>:latest .
 ```
+## Push the Updated Image 
+```sh
+docker push amrimuf/<service-name>:latest
+```
+```sh
+kubectl rollout restart deployment/user-service
+```
 
-## Create Docker Registry Secret
+## Create Docker Registry Secret 
 
 Create a Kubernetes secret for accessing the Docker registry:
 
