@@ -48,22 +48,27 @@ protoc --go_out=services/user-service/api/gen --go-grpc_out=services/user-servic
 protoc --go_out=services/course-service/api/gen --go-grpc_out=services/course-service/api/gen proto/course.proto
 ```
 
-## Build Docker Images
+## Option 1: Deploying with Kubernetes
+
+### Build Docker Images
 
 Build the Docker image for the services:
 
 ```sh
 docker build -t amrimuf/<service-name>:latest .
 ```
-## Push the Updated Image 
+
+## Push the Updated Image
+
 ```sh
 docker push amrimuf/<service-name>:latest
 ```
+
 ```sh
 kubectl rollout restart deployment/user-service
 ```
 
-## Create Docker Registry Secret 
+### Create Docker Registry Secret
 
 Create a Kubernetes secret for accessing the Docker registry:
 
@@ -75,7 +80,7 @@ kubectl create secret docker-registry my-registry-secret \
   --docker-email=<the_EMAIL>
 ```
 
-## Apply Kubernetes Manifests
+### Apply Kubernetes Manifests
 
 Deploy the services and deployments to Kubernetes:
 
@@ -84,7 +89,7 @@ kubectl apply -f deploy/k8s/base/deployments/
 kubectl apply -f deploy/k8s/base/services/
 ```
 
-## Verify Deployment
+### Verify Deployment
 
 Check the status of the Pods, Deployments, Services, and Endpoints:
 
@@ -95,25 +100,63 @@ kubectl get services
 kubectl get endpoints
 ```
 
-## Port Forward to Access HTTP Service
+### Port Forward to Access HTTP Service
 
-If your service exposes an HTTP endpoint on port `8080`, you can access it using `kubectl port-forward`. This maps the service port in the Kubernetes cluster to your local machine.
+If your service exposes an HTTP endpoint on port `8083`, you can access it using `kubectl port-forward`. This maps the service port in the Kubernetes cluster to your local machine.
 
-1. Forward the HTTP port (e.g., `8080`):
+1. Forward the HTTP port (e.g., `8083`):
 
     ```sh
-    kubectl port-forward svc/user-service 8080:8080
+    kubectl port-forward svc/user-service 8083:8083
     ```
 
-    This command forwards the port `8080` from the `user-service` in the Kubernetes cluster to your local machine on the same port.
+    This command forwards the port `8083` from the `user-service` in the Kubernetes cluster to your local machine on the same port.
 
 2. Verify the service is accessible by sending a request using `curl`:
 
     ```sh
-    curl http://localhost:8080/users
+    curl http://localhost:8083/users
     ```
 
     If everything is working, you should see a response with the list of users from the service.
+
+## Option 2: Deploying with Docker Compose
+
+### Build and Start Services
+
+#### Development Environment
+
+To start your services in a development environment, use the docker-compose.dev.yml file:
+
+```sh
+docker-compose -f docker-compose.dev.yml up --build
+```
+
+#### Production Environment
+
+To start your services in a production environment, use the docker-compose.prod.yml file:
+
+```sh
+docker-compose -f docker-compose.prod.yml up --build
+```
+
+### Stopping the Services
+
+To stop the running services, use:
+
+```sh
+docker-compose down
+```
+
+### Cleanup Docker Images
+
+If you need to remove all stopped services and their images, you can use:
+
+```sh
+docker-compose down --rmi all
+```
+
+---
 
 ## Troubleshooting
 

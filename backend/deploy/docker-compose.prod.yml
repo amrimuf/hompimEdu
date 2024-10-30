@@ -5,7 +5,7 @@ services:
         image: amrimuf/user-service:latest
         ports:
             - "50051:50051"
-            - "8080:8080"
+            - "8083:8083"
         networks:
             - myapp-network
 

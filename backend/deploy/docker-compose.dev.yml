@@ -2,16 +2,16 @@ version: "3.8"
 
 services:
     user-service:
-        build: 
+        build:
             context: ../services/user-service
         ports:
             - "50051:50051"
-            - "8080:8080"
+            - "8083:8083"
         networks:
             - myapp-network
 
     course-service:
-        build: 
+        build:
             context: ../services/course-service
         ports:
             - "50052:50052"

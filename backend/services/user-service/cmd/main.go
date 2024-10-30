@@ -44,5 +44,5 @@ func startHTTPServer() {
     userServiceClient := api.NewUserServiceClient(grpcConn)
     api.RegisterRoutes(userServiceClient)
 
-    log.Fatal(http.ListenAndServe(":8080", nil))
+    log.Fatal(http.ListenAndServe(":8083", nil))
 }
