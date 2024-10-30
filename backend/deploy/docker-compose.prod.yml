@@ -16,6 +16,14 @@ services:
         networks:
             - myapp-network
 
+    auth-service:
+        build:
+            context: ../services/auth-service
+        ports:
+            - "50053:50053"
+        networks:
+            - myapp-network
+
 networks:
     myapp-network:
         driver: bridge

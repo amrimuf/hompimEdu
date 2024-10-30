@@ -1,0 +1,10 @@
+# Exclude generated protocol buffers files
+gen/
+
+# Exclude other unnecessary files and directories
+*.pb.go
+*.pb.gw.go
+*.log
+*.tmp
+node_modules/
+build/

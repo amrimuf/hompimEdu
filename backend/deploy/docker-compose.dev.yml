@@ -4,6 +4,8 @@ services:
     user-service:
         build:
             context: ../services/user-service
+        environment:
+            JWT_SECRET: ${JWT_SECRET}
         ports:
             - "50051:50051"
             - "8083:8083"
@@ -18,6 +20,66 @@ services:
         networks:
             - myapp-network
 
+    auth-service:
+        build:
+            context: ../services/auth-service
+        environment:
+            DB_HOST: ${POSTGRES_HOST}
+            DB_PORT: ${POSTGRES_PORT}
+            DB_USER: ${POSTGRES_USER}
+            DB_PASSWORD: ${POSTGRES_PASSWORD}
+            DB_NAME: ${POSTGRES_DB}
+            JWT_SECRET: ${JWT_SECRET}
+        ports:
+            - "50053:50053"
+            - "8084:8084"
+        networks:
+            - myapp-network
+
+    postgres:
+        image: postgres:14
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        ports:
+            - "5432:5432"
+        networks:
+            - myapp-network
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    migration:
+        image: migrate/migrate
+        command:
+            [
+                "-path",
+                "/migrations",
+                "-database",
+                "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable",
+                "up",
+            ]
+        volumes:
+            - ./migrations:/migrations
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - myapp-network
+
 networks:
     myapp-network:
         driver: bridge
+
+volumes:
+    postgres_data:
+        name: myapp_postgres_data
