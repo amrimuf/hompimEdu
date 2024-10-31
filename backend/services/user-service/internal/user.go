@@ -3,56 +3,42 @@ package internal
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log"
 
 	pb "github.com/amrimuf/hompimEdu/services/user-service/api/gen/userpb"
 	"golang.org/x/crypto/bcrypt"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// Server represents the gRPC server and holds the database connection.
 type Server struct {
 	pb.UnimplementedUserServiceServer
-	db *sql.DB // Add DB connection for actual user data
+	db *sql.DB // Database connection for user data
 }
 
-func (s *Server) AuthenticateJWT(ctx context.Context) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return "", errors.New("missing metadata")
-	}
-
-	// Log the incoming metadata for debugging
-	log.Printf("Incoming metadata: %v", md)
-
-	if len(md["authorization"]) == 0 {
-		return "", errors.New("missing token")
-	}
-
-	// Expect the token to be in the format "Bearer <token>"
-	token := md["authorization"][0]
-	if len(token) < 7 || token[:7] != "Bearer " {
-		return "", errors.New("invalid token format")
-	}
-
-	// Strip the "Bearer " prefix to get the token
-	token = token[7:]
-
-	username, err := ValidateJWT(token)
-	if err != nil {
-		return "", err
-	}
-	return username, nil
+// NewServer creates a new Server with a database connection.
+func NewServer(db *sql.DB) *Server {
+	return &Server{db: db}
 }
 
-
-
+// GetUser fetches a user by their ID from the database.
 func (s *Server) GetUser(ctx context.Context, req *pb.UserRequest) (*pb.UserResponse, error) {
-	// Here you would normally fetch user details from a database
-	return &pb.UserResponse{Id: req.UserId, Name: "John Doe", Email: "john@example.com"}, nil
+	var user pb.UserResponse
+
+	// Query the database for the user with the provided user ID
+	err := s.db.QueryRow("SELECT id, username, email FROM users WHERE id = $1", req.UserId).Scan(&user.Id, &user.Username, &user.Email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // User not found
+		}
+		log.Printf("Error fetching user: %v", err)
+		return nil, err // Handle other database errors
+	}
+
+	return &user, nil
 }
 
+// CreateUser creates a new user and saves it to the database.
 func (s *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
 	// Hash the password before saving it
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -60,33 +46,42 @@ func (s *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb
 		return nil, err
 	}
 
-	// Here you would normally save the user details to the database, including the hashed password
-	_, err = s.db.Exec("INSERT INTO users (name, email, password) VALUES ($1, $2, $3)", req.Name, req.Email, hashedPassword)
+	// Insert the user details into the database, including the hashed password
+	var userID int64
+	err = s.db.QueryRow("INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id", req.Username, req.Email, hashedPassword).Scan(&userID)
 	if err != nil {
-		return nil, err
+		log.Printf("Error inserting user: %v", err)
+		return nil, err // Handle other database errors
 	}
 
-	// Assume the ID is generated after insertion (you should fetch it accordingly if needed)
-	return &pb.CreateUserResponse{Id: 1, Name: req.Name, Email: req.Email}, nil
+	return &pb.CreateUserResponse{Id: userID, Username: req.Username, Email: req.Email}, nil
 }
 
+// GetUsers retrieves a list of all users from the database.
+func (s *Server) GetUsers(ctx context.Context, req *emptypb.Empty) (*pb.GetUsersResponse, error) {
+	// Query the database for all users
+	rows, err := s.db.Query("SELECT id, username FROM users")
+	if err != nil {
+		log.Printf("Error fetching users: %v", err)
+		return nil, err // Handle database errors
+	}
+	defer rows.Close()
 
-func (s *Server) ListUsers(ctx context.Context, req *emptypb.Empty) (*pb.ListUsersResponse, error) {
-    // Log incoming context and metadata
-    // md, _ := metadata.FromIncomingContext(ctx)
-    // log.Printf("Incoming metadata: %v", md)
+	var users []*pb.User
+	for rows.Next() {
+		var user pb.User
+		if err := rows.Scan(&user.Id, &user.Username); err != nil {
+			log.Printf("Error scanning user: %v", err)
+			return nil, err // Handle scanning errors
+		}
+		users = append(users, &user)
+	}
 
-    // // Authenticate JWT
-    // _, err := s.AuthenticateJWT(ctx)
-    // if err != nil {
-    //     return nil, err
-    // }
+	// Check for errors from iterating over rows
+	if err := rows.Err(); err != nil {
+		log.Printf("Error during rows iteration: %v", err)
+		return nil, err // Handle iteration errors
+	}
 
-    // Example user data - replace this with actual DB query
-    users := []*pb.User{
-        {Id: "1", Name: "Alice"},
-        {Id: "2", Name: "Bob"},
-    }
-
-    return &pb.ListUsersResponse{Users: users}, nil
+	return &pb.GetUsersResponse{Users: users}, nil // Return updated response type
 }

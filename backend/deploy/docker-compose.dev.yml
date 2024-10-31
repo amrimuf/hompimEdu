@@ -5,12 +5,17 @@ services:
         build:
             context: ../services/user-service
         environment:
+            DB_HOST: ${POSTGRES_HOST}
+            DB_PORT: ${POSTGRES_PORT}
+            DB_USER: ${POSTGRES_USER}
+            DB_PASSWORD: ${POSTGRES_PASSWORD}
+            DB_NAME: ${POSTGRES_DB}
             JWT_SECRET: ${JWT_SECRET}
         ports:
             - "50051:50051"
             - "8083:8083"
         networks:
-            - myapp-network
+            - deploy_default
 
     course-service:
         build:
@@ -18,7 +23,7 @@ services:
         ports:
             - "50052:50052"
         networks:
-            - myapp-network
+            - deploy_default
 
     auth-service:
         build:
@@ -34,7 +39,23 @@ services:
             - "50053:50053"
             - "8084:8084"
         networks:
-            - myapp-network
+            - deploy_default
+
+    gateway:
+        build:
+            context: ../gateway
+        environment:
+            USER_SERVICE_URL: http://user-service:8083
+            AUTH_SERVICE_URL: http://auth-service:8084
+            API_GATEWAY_PORT: 8085
+            JWT_SECRET: ${JWT_SECRET}
+        ports:
+            - "8085:8085"
+        networks:
+            - deploy_default
+        depends_on:
+            - user-service
+            - auth-service
 
     postgres:
         image: postgres:14
@@ -45,7 +66,7 @@ services:
         ports:
             - "5432:5432"
         networks:
-            - myapp-network
+            - deploy_default
         volumes:
             - postgres_data:/var/lib/postgresql/data
         healthcheck:
@@ -74,10 +95,10 @@ services:
             postgres:
                 condition: service_healthy
         networks:
-            - myapp-network
+            - deploy_default
 
 networks:
-    myapp-network:
+    deploy_default:
         driver: bridge
 
 volumes:

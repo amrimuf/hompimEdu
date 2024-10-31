@@ -9,37 +9,36 @@ import "google/protobuf/empty.proto";
 service UserService {
   rpc GetUser (UserRequest) returns (UserResponse);
   rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
-  rpc ListUsers(google.protobuf.Empty) returns (ListUsersResponse);
+  rpc GetUsers(google.protobuf.Empty) returns (GetUsersResponse);
 }
 
 message UserRequest {
-  int32 user_id = 1;
+  int64 user_id = 1; // Use int64 to match the Go int64 type
 }
 
 message UserResponse {
-  int32 id = 1;
-  string name = 2;
+  int64 id = 1; // Change to int64 to match the Go User struct
+  string username = 2; // Updated field name to match User struct
   string email = 3;
-  // other fields
 }
 
 message CreateUserRequest {
-  string name = 1;
+  string username = 1; // Updated field name to match User struct
   string email = 2;
   string password = 3;
 }
 
 message CreateUserResponse {
-  int32 id = 1;
-  string name = 2;
+  int64 id = 1; // Change to int64 to match the Go User struct
+  string username = 2; // Updated field name to match User struct
   string email = 3;
 }
 
-message ListUsersResponse {
-    repeated User users = 1;
+message GetUsersResponse { 
+    repeated User users = 1; // Array of User messages
 }
 
 message User {
-    string id = 1;
-    string name = 2;
+    int64 id = 1; // Change to int64 to match the Go User struct
+    string username = 2; // Updated field name to match User struct
 }

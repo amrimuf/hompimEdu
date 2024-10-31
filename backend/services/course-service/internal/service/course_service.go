@@ -79,11 +79,11 @@ func NewUserServiceClient(address string) (*UserServiceClient, error) {
     }, nil
 }
 
-// CallListUsers makes a call to the ListUsers method of the UserService
-func (usc *UserServiceClient) CallListUsers() {
+// CallGetUsers makes a call to the GetUsers method of the UserService
+func (usc *UserServiceClient) CallGetUsers() {
     maxRetries := 5
     for i := 0; i < maxRetries; i++ {
-        resp, err := usc.client.ListUsers(context.Background(), &emptypb.Empty{})
+        resp, err := usc.client.GetUsers(context.Background(), &emptypb.Empty{})
         if err != nil {
             log.Printf("Could not list users: %v. Retrying in 5 seconds...", err)
             time.Sleep(5 * time.Second)
@@ -91,7 +91,7 @@ func (usc *UserServiceClient) CallListUsers() {
         }
 
         for _, user := range resp.Users {
-            log.Printf("User: %s, Name: %s", user.Id, user.Name)
+            log.Printf("User: %d, Username: %s", user.Id, user.Username)
         }
         return
     }

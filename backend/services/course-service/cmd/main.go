@@ -17,8 +17,8 @@ func main() {
         log.Fatalf("Failed to connect to user service: %v", err)
     }
 
-    // Call ListUsers
-    userServiceClient.CallListUsers()
+    // Call GetUsers
+    userServiceClient.CallGetUsers()
 
     lis, err := net.Listen("tcp", ":50052")
     if err != nil {

@@ -21,15 +21,16 @@ func NewUserServiceClient(conn *grpc.ClientConn) *UserServiceClient {
 	}
 }
 
+// GetUser retrieves a user by ID
 func (usc *UserServiceClient) GetUser(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("id")
+	userID := r.URL.Query().Get("id") // Expecting ?id=123
 	id, err := strconv.Atoi(userID)
 	if err != nil {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
 
-	req := &pb.UserRequest{UserId: int32(id)}
+	req := &pb.UserRequest{UserId: int64(id)}
 	ctx := context.Background()
 	res, err := usc.client.GetUser(ctx, req)
 	if err != nil {
@@ -41,6 +42,7 @@ func (usc *UserServiceClient) GetUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
+// CreateUser creates a new user
 func (usc *UserServiceClient) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var user pb.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -59,10 +61,10 @@ func (usc *UserServiceClient) CreateUser(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(res)
 }
 
-// New method to list users
-func (usc *UserServiceClient) ListUsers(w http.ResponseWriter, r *http.Request) {
+// GetUsers retrieves a list of users
+func (usc *UserServiceClient) GetUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	res, err := usc.client.ListUsers(ctx, &emptypb.Empty{})
+	res, err := usc.client.GetUsers(ctx, &emptypb.Empty{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -72,8 +74,9 @@ func (usc *UserServiceClient) ListUsers(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(res)
 }
 
+// RegisterRoutes registers the HTTP routes
 func RegisterRoutes(client *UserServiceClient) {
-	http.HandleFunc("/users", client.GetUser)
-	http.HandleFunc("/users/create", client.CreateUser)
-	http.HandleFunc("/users/list", client.ListUsers) // Register ListUsers route
+	http.HandleFunc("/users", client.GetUsers)           // Route for getting all users
+	http.HandleFunc("/users/create", client.CreateUser)   // Route for creating a new user
+	http.HandleFunc("/user", client.GetUser)              // Route for getting a specific user by ID
 }
