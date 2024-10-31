@@ -11,17 +11,21 @@ services:
             DB_PASSWORD: ${POSTGRES_PASSWORD}
             DB_NAME: ${POSTGRES_DB}
             JWT_SECRET: ${JWT_SECRET}
+            GRPC_PORT: ${USER_SERVICE_GRPC_PORT:-50051}
+            HTTP_PORT: ${USER_SERVICE_HTTP_PORT:-8083}
         ports:
-            - "50051:50051"
-            - "8083:8083"
+            - "${USER_SERVICE_GRPC_PORT:-50051}:${USER_SERVICE_GRPC_PORT:-50051}"
+            - "${USER_SERVICE_HTTP_PORT:-8083}:${USER_SERVICE_HTTP_PORT:-8083}"
         networks:
             - deploy_default
 
     course-service:
         build:
             context: ../services/course-service
+        environment:
+            GRPC_PORT: ${COURSE_SERVICE_GRPC_PORT:-50052}
         ports:
-            - "50052:50052"
+            - "${COURSE_SERVICE_GRPC_PORT:-50052}:${COURSE_SERVICE_GRPC_PORT:-50052}"
         networks:
             - deploy_default
 
@@ -35,9 +39,11 @@ services:
             DB_PASSWORD: ${POSTGRES_PASSWORD}
             DB_NAME: ${POSTGRES_DB}
             JWT_SECRET: ${JWT_SECRET}
+            GRPC_PORT: ${AUTH_SERVICE_GRPC_PORT:-50053}
+            HTTP_PORT: ${AUTH_SERVICE_HTTP_PORT:-8084}
         ports:
-            - "50053:50053"
-            - "8084:8084"
+            - "${AUTH_SERVICE_GRPC_PORT:-50053}:${AUTH_SERVICE_GRPC_PORT:-50053}"
+            - "${AUTH_SERVICE_HTTP_PORT:-8084}:${AUTH_SERVICE_HTTP_PORT:-8084}"
         networks:
             - deploy_default
 
@@ -45,12 +51,12 @@ services:
         build:
             context: ../gateway
         environment:
-            USER_SERVICE_URL: http://user-service:8083
-            AUTH_SERVICE_URL: http://auth-service:8084
-            API_GATEWAY_PORT: 8085
+            USER_SERVICE_URL: http://user-service:${USER_SERVICE_HTTP_PORT:-8083}
+            AUTH_SERVICE_URL: http://auth-service:${AUTH_SERVICE_HTTP_PORT:-8084}
+            API_GATEWAY_PORT: ${API_GATEWAY_PORT:-8085}
             JWT_SECRET: ${JWT_SECRET}
         ports:
-            - "8085:8085"
+            - "${API_GATEWAY_PORT:-8085}:${API_GATEWAY_PORT:-8085}"
         networks:
             - deploy_default
         depends_on:

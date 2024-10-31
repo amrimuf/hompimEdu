@@ -192,3 +192,117 @@ kubectl delete all --all
 ---
 
 Replace `<the_REGISTRY_SERVER>`, `<the_USERNAME>`, `<the_PASSWORD>`, and `<the_EMAIL>` with the actual Docker registry credentials.
+
+## Project Structure
+
+### Current Structure
+```
+backend/
+├── gateway/
+│   ├── middleware/
+│   ├── routes/
+│   ├── main.go
+│   └── Dockerfile
+├── services/
+│   ├── auth-service/
+│   │   ├── api/
+│   │   │   ├── gen/
+│   │   │   │   └── authpb/
+│   │   │   └── handlers/
+│   │   ├── cmd/
+│   │   │   └── main.go
+│   │   ├── internal/
+│   │   │   └── services/
+│   │   ├── Dockerfile
+│   │   ├── go.mod
+│   │   └── go.sum
+│   ├── user-service/
+│   │   ├── api/
+│   │   │   ├── gen/
+│   │   │   │   └── userpb/
+│   │   │   └── handlers/
+│   │   ├── cmd/
+│   │   │   └── main.go
+│   │   ├── internal/
+│   │   ├── Dockerfile
+│   │   ├── go.mod
+│   │   └── go.sum
+│   └── course-service/
+│       ├── api/
+│       │   ├── gen/
+│       │   │   ├── coursepb/
+│       │   │   └── userpb/
+│       │   └── handlers/
+│       ├── cmd/
+│       │   └── main.go
+│       ├── internal/
+│       │   └── service/
+│       ├── Dockerfile
+│       ├── go.mod
+│       └── go.sum
+├── proto/
+│   ├── auth.proto
+│   ├── user.proto
+│   └── course.proto
+└── README.md
+```
+
+### Recommended Structure
+```
+backend/
+├── config/                    # Centralized configuration
+│   ├── development.yaml
+│   └── production.yaml
+├── deploy/                    # Deployment configurations
+│   ├── kubernetes/
+│   │   ├── base/
+│   │   └── overlays/
+│   └── docker-compose/
+├── docs/                      # Documentation
+│   ├── api/
+│   │   ├── swagger/
+│   │   └── postman/
+│   └── architecture/
+│       ├── diagrams/
+│       └── decisions/
+├── gateway/
+│   ├── middleware/
+│   ├── routes/
+│   ├── main.go
+│   └── Dockerfile
+├── pkg/                       # Shared packages
+│   ├── logger/
+│   │   └── zap.go
+│   ├── database/
+│   │   └── postgres.go
+│   └── middleware/
+│       └── auth.go
+├── proto/                     # Protocol Buffers
+│   ├── auth.proto
+│   ├── user.proto
+│   └── course.proto
+├── scripts/                   # Utility scripts
+│   ├── build.sh
+│   ├── test.sh
+│   └── deploy.sh
+├── services/                  # Microservices
+│   ├── auth-service/
+│   │   ├── api/
+│   │   ├── cmd/
+│   │   ├── internal/
+│   │   ├── tests/            # Tests directory
+│   │   │   ├── unit/
+│   │   │   ├── integration/
+│   │   │   └── e2e/
+│   │   ├── metrics/          # Monitoring
+│   │   │   └── prometheus/
+│   │   ├── health/           # Health checks
+│   │   │   ├── liveness.go
+│   │   │   └── readiness.go
+│   │   └── Dockerfile
+│   ├── user-service/
+│   │   └── [similar structure]
+│   └── course-service/
+│       └── [similar structure]
+└── README.md
+```
