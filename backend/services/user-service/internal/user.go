@@ -7,6 +7,8 @@ import (
 
 	pb "github.com/amrimuf/hompimEdu/services/user-service/api/gen/userpb"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -23,19 +25,20 @@ func NewServer(db *sql.DB) *Server {
 
 // GetUser fetches a user by their ID from the database.
 func (s *Server) GetUser(ctx context.Context, req *pb.UserRequest) (*pb.UserResponse, error) {
-	var user pb.UserResponse
-
-	// Query the database for the user with the provided user ID
-	err := s.db.QueryRow("SELECT id, username, email FROM users WHERE id = $1", req.UserId).Scan(&user.Id, &user.Username, &user.Email)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil // User not found
-		}
-		log.Printf("Error fetching user: %v", err)
-		return nil, err // Handle other database errors
-	}
-
-	return &user, nil
+    var user pb.UserResponse
+    err := s.db.QueryRowContext(ctx, `
+        SELECT id, username, email 
+        FROM users 
+        WHERE id = $1`, req.UserId).Scan(&user.Id, &user.Username, &user.Email)
+    
+    if err == sql.ErrNoRows {
+        return nil, status.Errorf(codes.NotFound, "user not found")
+    }
+    if err != nil {
+        return nil, status.Errorf(codes.Internal, "failed to fetch user: %v", err)
+    }
+    
+    return &user, nil
 }
 
 // CreateUser creates a new user and saves it to the database.

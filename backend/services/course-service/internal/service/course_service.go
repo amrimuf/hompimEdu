@@ -4,19 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/amrimuf/hompimEdu/services/course-service/api/gen/coursepb"
+	"github.com/amrimuf/hompimEdu/services/course-service/api/gen/userpb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type CourseServiceServer struct {
 	coursepb.UnimplementedCourseServiceServer
 	db *sql.DB
+	userClient userpb.UserServiceClient
 }
 
-func NewCourseServiceServer(db *sql.DB) *CourseServiceServer {
+func NewCourseServiceServer(db *sql.DB, userClient userpb.UserServiceClient) *CourseServiceServer {
 	return &CourseServiceServer{
 		db: db,
+		userClient: userClient,
 	}
 }
 
@@ -41,10 +48,26 @@ func (s *CourseServiceServer) GetCourse(ctx context.Context, req *coursepb.GetCo
 
 // CreateCourse creates a new course
 func (s *CourseServiceServer) CreateCourse(ctx context.Context, req *coursepb.CreateCourseRequest) (*coursepb.CreateCourseResponse, error) {
+	log.Printf("Attempting to verify mentor with ID: %d", req.MentorId)
+
+	// First verify if mentor exists
+	_, err := s.userClient.GetUser(ctx, &userpb.UserRequest{
+		UserId: req.MentorId,
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil, fmt.Errorf("mentor not found")
+		}
+		log.Printf("Error verifying mentor: %v", err)
+		return nil, fmt.Errorf("failed to verify mentor: %v", err)
+	}
+
+	log.Printf("Mentor verified successfully")
+
 	var course coursepb.Course
 	now := time.Now().Format(time.RFC3339)
 	
-	err := s.db.QueryRowContext(ctx, `
+	err = s.db.QueryRowContext(ctx, `
 		INSERT INTO courses (title, description, duration, enrollment_type, mentor_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, title, description, duration, enrollment_type, mentor_id, created_at, updated_at`,
@@ -53,7 +76,7 @@ func (s *CourseServiceServer) CreateCourse(ctx context.Context, req *coursepb.Cr
 		&course.EnrollmentType, &course.MentorId, &course.CreatedAt, &course.UpdatedAt)
 	
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create course: %v", err)
 	}
 	
 	return &coursepb.CreateCourseResponse{Course: &course}, nil

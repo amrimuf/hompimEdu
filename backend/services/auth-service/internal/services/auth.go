@@ -26,15 +26,23 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
     s.mu.Lock()
     defer s.mu.Unlock()
 
-    // Check if the user already exists
+    // Check if username already exists
     var exists bool
     err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username=$1)", req.Username).Scan(&exists)
     if err != nil {
         return nil, err
     }
-
     if exists {
-        return nil, errors.New("user already exists")
+        return nil, errors.New("username already exists")
+    }
+
+    // Check if email already exists
+    err = s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email=$1)", req.Email).Scan(&exists)
+    if err != nil {
+        return nil, err
+    }
+    if exists {
+        return nil, errors.New("email already exists")
     }
 
     // Hash the password
@@ -43,13 +51,23 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
         return nil, err
     }
 
-    // Insert the new user into the database
-    _, err = s.db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", req.Username, hashedPassword)
+    // Insert the new user
+    var userID int64
+    err = s.db.QueryRow(`
+        INSERT INTO users (username, password, email) 
+        VALUES ($1, $2, $3) 
+        RETURNING id`,
+        req.Username, string(hashedPassword), req.Email,
+    ).Scan(&userID)
     if err != nil {
         return nil, err
     }
 
-    return &pb.RegisterResponse{UserId: req.Username}, nil
+    return &pb.RegisterResponse{
+        UserId: userID,
+        Username: req.Username,
+        Email: req.Email,
+    }, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
@@ -57,15 +75,16 @@ func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
     defer s.mu.Unlock()
 
     var (
-        hashedPassword string
         userID        int64
+        hashedPassword string
+        email         string
     )
-    err := s.db.QueryRow("SELECT id, password FROM users WHERE username=$1", req.Username).Scan(&userID, &hashedPassword)
+    err := s.db.QueryRow("SELECT id, password, email FROM users WHERE username=$1", req.Username).Scan(&userID, &hashedPassword, &email)
     if err != nil {
         return nil, errors.New("invalid username or password")
     }
 
-    // Check the password against the hashed password
+    // Check the password
     err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(req.Password))
     if err != nil {
         return nil, errors.New("invalid username or password")
@@ -77,5 +96,10 @@ func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
         return nil, err
     }
 
-    return &pb.LoginResponse{Token: token}, nil
+    return &pb.LoginResponse{
+        Token: token,
+        UserId: userID,
+        Username: req.Username,
+        Email: email,
+    }, nil
 }

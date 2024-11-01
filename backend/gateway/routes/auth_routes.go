@@ -28,6 +28,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate required fields
+	if credentials["username"] == "" || credentials["password"] == "" {
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+
 	log.Printf("Decoded credentials: %+v", credentials)
 
 	// Call the authentication service
@@ -46,7 +52,16 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	var userData map[string]string
-	json.NewDecoder(r.Body).Decode(&userData)
+	if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if userData["username"] == "" || userData["password"] == "" || userData["email"] == "" {
+		http.Error(w, "Username, password and email are required", http.StatusBadRequest)
+		return
+	}
 
 	resp, err := services.AuthClient("POST", "/register", userData)
 	if err != nil {

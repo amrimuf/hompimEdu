@@ -13,9 +13,6 @@ services:
             JWT_SECRET: ${JWT_SECRET}
             GRPC_PORT: ${USER_SERVICE_GRPC_PORT:-50051}
             HTTP_PORT: ${USER_SERVICE_HTTP_PORT:-8083}
-        ports:
-            - "${USER_SERVICE_GRPC_PORT:-50051}:${USER_SERVICE_GRPC_PORT:-50051}"
-            - "${USER_SERVICE_HTTP_PORT:-8083}:${USER_SERVICE_HTTP_PORT:-8083}"
         networks:
             - deploy_default
 
@@ -30,11 +27,12 @@ services:
             DB_NAME: ${POSTGRES_DB}
             GRPC_PORT: ${COURSE_SERVICE_GRPC_PORT:-50052}
             HTTP_PORT: ${COURSE_SERVICE_HTTP_PORT:-8002}
-        ports:
-            - "${COURSE_SERVICE_GRPC_PORT:-50052}:${COURSE_SERVICE_GRPC_PORT:-50052}"
-            # - "${COURSE_SERVICE_HTTP_PORT:-8002}:${COURSE_SERVICE_HTTP_PORT:-8002}"
+            USER_SERVICE_HOST: user-service
+            USER_SERVICE_GRPC_PORT: ${USER_SERVICE_GRPC_PORT:-50051}
         networks:
             - deploy_default
+        depends_on:
+            - user-service
 
     auth-service:
         build:
@@ -48,9 +46,6 @@ services:
             JWT_SECRET: ${JWT_SECRET}
             GRPC_PORT: ${AUTH_SERVICE_GRPC_PORT:-50053}
             HTTP_PORT: ${AUTH_SERVICE_HTTP_PORT:-8084}
-        ports:
-            - "${AUTH_SERVICE_GRPC_PORT:-50053}:${AUTH_SERVICE_GRPC_PORT:-50053}"
-            - "${AUTH_SERVICE_HTTP_PORT:-8084}:${AUTH_SERVICE_HTTP_PORT:-8084}"
         networks:
             - deploy_default
 
@@ -62,7 +57,7 @@ services:
             AUTH_SERVICE_URL: http://auth-service:${AUTH_SERVICE_HTTP_PORT:-8084}
             API_GATEWAY_PORT: ${API_GATEWAY_PORT:-8085}
             JWT_SECRET: ${JWT_SECRET}
-            COURSE_SERVICE_URL: http://course-service:${COURSE_SERVICE_HTTP_PORT:-8082}
+            COURSE_SERVICE_URL: http://course-service:${COURSE_SERVICE_HTTP_PORT:-8002}
         ports:
             - "${API_GATEWAY_PORT:-8085}:${API_GATEWAY_PORT:-8085}"
         networks:
