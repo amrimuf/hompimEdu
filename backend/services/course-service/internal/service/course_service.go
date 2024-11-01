@@ -97,3 +97,21 @@ func (usc *UserServiceClient) CallGetUsers() {
     }
     log.Fatalf("Failed to connect to user-service after %d attempts", maxRetries)
 }
+
+// Add UpdateCourse method to CourseServiceServer
+func (s *CourseServiceServer) UpdateCourse(ctx context.Context, req *coursepb.UpdateCourseRequest) (*coursepb.UpdateCourseResponse, error) {
+    course, exists := s.courses[req.Id]
+    if !exists {
+        return nil, errors.New("course not found")
+    }
+
+    // Update course fields
+    course.Title = req.Title
+    course.Description = req.Description
+    course.Duration = req.Duration
+    course.EnrollmentType = req.EnrollmentType
+    course.MentorId = req.MentorId
+    course.UpdatedAt = time.Now().Format(time.RFC3339)
+
+    return &coursepb.UpdateCourseResponse{Course: course}, nil
+}

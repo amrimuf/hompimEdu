@@ -1,4 +1,4 @@
-package internal
+package services
 
 import (
 	"context"
@@ -56,8 +56,11 @@ func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
     s.mu.Lock()
     defer s.mu.Unlock()
 
-    var hashedPassword string
-    err := s.db.QueryRow("SELECT password FROM users WHERE username=$1", req.Username).Scan(&hashedPassword)
+    var (
+        hashedPassword string
+        userID        int64
+    )
+    err := s.db.QueryRow("SELECT id, password FROM users WHERE username=$1", req.Username).Scan(&userID, &hashedPassword)
     if err != nil {
         return nil, errors.New("invalid username or password")
     }
@@ -69,7 +72,7 @@ func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
     }
 
     // Generate JWT token
-    token, err := GenerateJWT(req.Username)
+    token, err := GenerateJWT(req.Username, userID)
     if err != nil {
         return nil, err
     }

@@ -12,6 +12,9 @@ service CourseService {
   // RPC method to create a new course
   rpc CreateCourse(CreateCourseRequest) returns (CreateCourseResponse);
 
+  // RPC method to update an existing course
+  rpc UpdateCourse(UpdateCourseRequest) returns (UpdateCourseResponse);
+
   // RPC method to list all courses
   rpc ListCourses(ListCoursesRequest) returns (ListCoursesResponse);
 }
@@ -28,12 +31,25 @@ message GetCourseResponse {
 message CreateCourseRequest {
   string title = 1;
   string description = 2;
-  string duration = 3;
+  int32 duration = 3;
   string enrollment_type = 4;
-  int32 mentor_id = 5;
+  int64 mentor_id = 5;
 }
 
 message CreateCourseResponse {
+  Course course = 1;
+}
+
+message UpdateCourseRequest {
+  int32 id = 1;
+  string title = 2;
+  string description = 3;
+  int32 duration = 4;
+  string enrollment_type = 5;
+  int64 mentor_id = 6;
+}
+
+message UpdateCourseResponse {
   Course course = 1;
 }
 
@@ -48,9 +64,9 @@ message Course {
   int32 id = 1;
   string title = 2;
   string description = 3;
-  string duration = 4;
+  int32 duration = 4;
   string enrollment_type = 5;
-  int32 mentor_id = 6;
+  int64 mentor_id = 6;
   string created_at = 7;
   string updated_at = 8;
 }

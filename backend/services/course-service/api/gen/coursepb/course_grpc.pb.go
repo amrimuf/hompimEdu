@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	CourseService_GetCourse_FullMethodName    = "/coursepb.CourseService/GetCourse"
 	CourseService_CreateCourse_FullMethodName = "/coursepb.CourseService/CreateCourse"
+	CourseService_UpdateCourse_FullMethodName = "/coursepb.CourseService/UpdateCourse"
 	CourseService_ListCourses_FullMethodName  = "/coursepb.CourseService/ListCourses"
 )
 
@@ -34,6 +35,8 @@ type CourseServiceClient interface {
 	GetCourse(ctx context.Context, in *GetCourseRequest, opts ...grpc.CallOption) (*GetCourseResponse, error)
 	// RPC method to create a new course
 	CreateCourse(ctx context.Context, in *CreateCourseRequest, opts ...grpc.CallOption) (*CreateCourseResponse, error)
+	// RPC method to update an existing course
+	UpdateCourse(ctx context.Context, in *UpdateCourseRequest, opts ...grpc.CallOption) (*UpdateCourseResponse, error)
 	// RPC method to list all courses
 	ListCourses(ctx context.Context, in *ListCoursesRequest, opts ...grpc.CallOption) (*ListCoursesResponse, error)
 }
@@ -66,6 +69,16 @@ func (c *courseServiceClient) CreateCourse(ctx context.Context, in *CreateCourse
 	return out, nil
 }
 
+func (c *courseServiceClient) UpdateCourse(ctx context.Context, in *UpdateCourseRequest, opts ...grpc.CallOption) (*UpdateCourseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateCourseResponse)
+	err := c.cc.Invoke(ctx, CourseService_UpdateCourse_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *courseServiceClient) ListCourses(ctx context.Context, in *ListCoursesRequest, opts ...grpc.CallOption) (*ListCoursesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCoursesResponse)
@@ -86,6 +99,8 @@ type CourseServiceServer interface {
 	GetCourse(context.Context, *GetCourseRequest) (*GetCourseResponse, error)
 	// RPC method to create a new course
 	CreateCourse(context.Context, *CreateCourseRequest) (*CreateCourseResponse, error)
+	// RPC method to update an existing course
+	UpdateCourse(context.Context, *UpdateCourseRequest) (*UpdateCourseResponse, error)
 	// RPC method to list all courses
 	ListCourses(context.Context, *ListCoursesRequest) (*ListCoursesResponse, error)
 	mustEmbedUnimplementedCourseServiceServer()
@@ -103,6 +118,9 @@ func (UnimplementedCourseServiceServer) GetCourse(context.Context, *GetCourseReq
 }
 func (UnimplementedCourseServiceServer) CreateCourse(context.Context, *CreateCourseRequest) (*CreateCourseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateCourse not implemented")
+}
+func (UnimplementedCourseServiceServer) UpdateCourse(context.Context, *UpdateCourseRequest) (*UpdateCourseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateCourse not implemented")
 }
 func (UnimplementedCourseServiceServer) ListCourses(context.Context, *ListCoursesRequest) (*ListCoursesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListCourses not implemented")
@@ -164,6 +182,24 @@ func _CourseService_CreateCourse_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CourseService_UpdateCourse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCourseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CourseServiceServer).UpdateCourse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CourseService_UpdateCourse_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CourseServiceServer).UpdateCourse(ctx, req.(*UpdateCourseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CourseService_ListCourses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListCoursesRequest)
 	if err := dec(in); err != nil {
@@ -196,6 +232,10 @@ var CourseService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateCourse",
 			Handler:    _CourseService_CreateCourse_Handler,
+		},
+		{
+			MethodName: "UpdateCourse",
+			Handler:    _CourseService_UpdateCourse_Handler,
 		},
 		{
 			MethodName: "ListCourses",

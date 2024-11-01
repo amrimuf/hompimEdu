@@ -9,6 +9,10 @@ import (
 	"github.com/amrimuf/hompimEdu/services/course-service/api/gen/coursepb"
 	"github.com/amrimuf/hompimEdu/services/course-service/internal/service"
 	"google.golang.org/grpc"
+	"github.com/gorilla/mux"
+	"google.golang.org/grpc/credentials/insecure"
+	"net/http"
+	"github.com/amrimuf/hompimEdu/services/course-service/api"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -45,23 +49,47 @@ func main() {
     }
 
     // Start gRPC server
-    lis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
+    go func() {
+        lis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
+        if err != nil {
+            log.Fatalf("failed to listen: %v", err)
+        }
+
+        grpcServer := grpc.NewServer()
+        courseService := service.NewCourseServiceServer()
+        coursepb.RegisterCourseServiceServer(grpcServer, courseService)
+        
+        reflection.Register(grpcServer)
+
+        log.Printf("gRPC server listening on port %s", grpcPort)
+        if err := grpcServer.Serve(lis); err != nil {
+            log.Fatalf("failed to serve: %v", err)
+        }
+    }()
+
+    // HTTP server
+    router := mux.NewRouter()
+    
+    // Create gRPC client for internal communication
+    conn, err := grpc.Dial(
+        fmt.Sprintf("localhost:%s", grpcPort),
+        grpc.WithTransportCredentials(insecure.NewCredentials()),
+    )
     if err != nil {
-        log.Fatalf("failed to listen: %v", err)
+        log.Fatalf("failed to dial: %v", err)
+    }
+    defer conn.Close()
+    
+    grpcClient := coursepb.NewCourseServiceClient(conn)
+    api.RegisterRoutes(router, grpcClient)
+
+    httpPort := os.Getenv("HTTP_PORT")
+    if httpPort == "" {
+        httpPort = "8082"
     }
 
-    // Initialize server with dependencies
-    grpcServer := grpc.NewServer()
-    courseService := service.NewCourseServiceServer()
-
-    coursepb.RegisterCourseServiceServer(grpcServer, courseService)
-
-    // Add reflection for development tools
-    reflection.Register(grpcServer)
-
-    // Start server with proper logging
-    log.Printf("Course service listening on port %s...", grpcPort)
-    if err := grpcServer.Serve(lis); err != nil {
+    log.Printf("HTTP server listening on port %s", httpPort)
+    if err := http.ListenAndServe(fmt.Sprintf(":%s", httpPort), router); err != nil {
         log.Fatalf("failed to serve: %v", err)
     }
 }
