@@ -23,9 +23,16 @@ services:
         build:
             context: ../services/course-service
         environment:
+            DB_HOST: ${POSTGRES_HOST}
+            DB_PORT: ${POSTGRES_PORT}
+            DB_USER: ${POSTGRES_USER}
+            DB_PASSWORD: ${POSTGRES_PASSWORD}
+            DB_NAME: ${POSTGRES_DB}
             GRPC_PORT: ${COURSE_SERVICE_GRPC_PORT:-50052}
+            HTTP_PORT: ${COURSE_SERVICE_HTTP_PORT:-8002}
         ports:
             - "${COURSE_SERVICE_GRPC_PORT:-50052}:${COURSE_SERVICE_GRPC_PORT:-50052}"
+            - "${COURSE_SERVICE_HTTP_PORT:-8002}:${COURSE_SERVICE_HTTP_PORT:-8002}"
         networks:
             - deploy_default
 

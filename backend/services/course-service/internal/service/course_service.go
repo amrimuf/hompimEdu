@@ -2,116 +2,114 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/amrimuf/hompimEdu/services/course-service/api/gen/coursepb"
-	"github.com/amrimuf/hompimEdu/services/course-service/api/gen/userpb"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// CourseServiceServer implements the CourseService gRPC interface
 type CourseServiceServer struct {
-    coursepb.UnimplementedCourseServiceServer
-    courses map[int32]*coursepb.Course // In-memory store for courses
-    nextID  int32                      // For auto-incrementing IDs
+	coursepb.UnimplementedCourseServiceServer
+	db *sql.DB
 }
 
-type UserServiceClient struct {
-    client userpb.UserServiceClient
-}
-
-// NewCourseServiceServer creates a new CourseServiceServer
-func NewCourseServiceServer() *CourseServiceServer {
-    return &CourseServiceServer{
-        courses: make(map[int32]*coursepb.Course),
-        nextID:  1,
-    }
+func NewCourseServiceServer(db *sql.DB) *CourseServiceServer {
+	return &CourseServiceServer{
+		db: db,
+	}
 }
 
 // GetCourse retrieves a course by ID
 func (s *CourseServiceServer) GetCourse(ctx context.Context, req *coursepb.GetCourseRequest) (*coursepb.GetCourseResponse, error) {
-    course, exists := s.courses[req.Id]
-    if !exists {
-        return nil, errors.New("course not found")
-    }
-    return &coursepb.GetCourseResponse{Course: course}, nil
+	var course coursepb.Course
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, title, description, duration, enrollment_type, mentor_id, created_at, updated_at 
+		FROM courses WHERE id = $1`, req.Id).Scan(
+		&course.Id, &course.Title, &course.Description, &course.Duration,
+		&course.EnrollmentType, &course.MentorId, &course.CreatedAt, &course.UpdatedAt)
+	
+	if err == sql.ErrNoRows {
+		return nil, errors.New("course not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	return &coursepb.GetCourseResponse{Course: &course}, nil
 }
 
 // CreateCourse creates a new course
 func (s *CourseServiceServer) CreateCourse(ctx context.Context, req *coursepb.CreateCourseRequest) (*coursepb.CreateCourseResponse, error) {
-    course := &coursepb.Course{
-        Id:             s.nextID,
-        Title:          req.Title,
-        Description:    req.Description,
-        Duration:       req.Duration,
-        EnrollmentType: req.EnrollmentType,
-        MentorId:       req.MentorId,
-        CreatedAt:      time.Now().Format(time.RFC3339),
-        UpdatedAt:      time.Now().Format(time.RFC3339),
-    }
-    s.courses[s.nextID] = course
-    s.nextID++
-    return &coursepb.CreateCourseResponse{Course: course}, nil
+	var course coursepb.Course
+	now := time.Now().Format(time.RFC3339)
+	
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO courses (title, description, duration, enrollment_type, mentor_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, title, description, duration, enrollment_type, mentor_id, created_at, updated_at`,
+		req.Title, req.Description, req.Duration, req.EnrollmentType, req.MentorId, now, now,
+	).Scan(&course.Id, &course.Title, &course.Description, &course.Duration,
+		&course.EnrollmentType, &course.MentorId, &course.CreatedAt, &course.UpdatedAt)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	return &coursepb.CreateCourseResponse{Course: &course}, nil
 }
 
 // ListCourses lists all available courses
 func (s *CourseServiceServer) ListCourses(ctx context.Context, req *coursepb.ListCoursesRequest) (*coursepb.ListCoursesResponse, error) {
-    var courses []*coursepb.Course
-    for _, course := range s.courses {
-        courses = append(courses, course)
-    }
-    return &coursepb.ListCoursesResponse{Courses: courses}, nil
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, title, description, duration, enrollment_type, mentor_id, created_at, updated_at 
+		FROM courses`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var courses []*coursepb.Course
+	for rows.Next() {
+		var course coursepb.Course
+		err := rows.Scan(
+			&course.Id, &course.Title, &course.Description, &course.Duration,
+			&course.EnrollmentType, &course.MentorId, &course.CreatedAt, &course.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		courses = append(courses, &course)
+	}
+	
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	
+	return &coursepb.ListCoursesResponse{Courses: courses}, nil
 }
 
-// NewUserServiceClient initializes a new UserServiceClient
-func NewUserServiceClient(address string) (*UserServiceClient, error) {
-    conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
-    if err != nil {
-        return nil, err
-    }
-
-    return &UserServiceClient{
-        client: userpb.NewUserServiceClient(conn),
-    }, nil
-}
-
-// CallGetUsers makes a call to the GetUsers method of the UserService
-func (usc *UserServiceClient) CallGetUsers() {
-    maxRetries := 5
-    for i := 0; i < maxRetries; i++ {
-        resp, err := usc.client.GetUsers(context.Background(), &emptypb.Empty{})
-        if err != nil {
-            log.Printf("Could not list users: %v. Retrying in 5 seconds...", err)
-            time.Sleep(5 * time.Second)
-            continue
-        }
-
-        for _, user := range resp.Users {
-            log.Printf("User: %d, Username: %s", user.Id, user.Username)
-        }
-        return
-    }
-    log.Fatalf("Failed to connect to user-service after %d attempts", maxRetries)
-}
-
-// Add UpdateCourse method to CourseServiceServer
+// UpdateCourse updates an existing course
 func (s *CourseServiceServer) UpdateCourse(ctx context.Context, req *coursepb.UpdateCourseRequest) (*coursepb.UpdateCourseResponse, error) {
-    course, exists := s.courses[req.Id]
-    if !exists {
-        return nil, errors.New("course not found")
-    }
-
-    // Update course fields
-    course.Title = req.Title
-    course.Description = req.Description
-    course.Duration = req.Duration
-    course.EnrollmentType = req.EnrollmentType
-    course.MentorId = req.MentorId
-    course.UpdatedAt = time.Now().Format(time.RFC3339)
-
-    return &coursepb.UpdateCourseResponse{Course: course}, nil
+	var course coursepb.Course
+	now := time.Now().Format(time.RFC3339)
+	
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE courses 
+		SET title = $1, description = $2, duration = $3, enrollment_type = $4, 
+			mentor_id = $5, updated_at = $6
+		WHERE id = $7
+		RETURNING id, title, description, duration, enrollment_type, mentor_id, created_at, updated_at`,
+		req.Title, req.Description, req.Duration, req.EnrollmentType, 
+		req.MentorId, now, req.Id,
+	).Scan(&course.Id, &course.Title, &course.Description, &course.Duration,
+		&course.EnrollmentType, &course.MentorId, &course.CreatedAt, &course.UpdatedAt)
+	
+	if err == sql.ErrNoRows {
+		return nil, errors.New("course not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	return &coursepb.UpdateCourseResponse{Course: &course}, nil
 }
